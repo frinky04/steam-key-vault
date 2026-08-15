@@ -67,7 +67,7 @@ export function SetupForm() {
           The <span className="font-mono">ADMIN_PASSWORD</span> environment variable. It stays as a recovery password afterwards.
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="mobile-form-grid grid grid-cols-2 gap-3">
         <div>
           <label className="label" htmlFor="name">Your name</label>
           <input id="name" name="name" required className="input" defaultValue={state.values?.name ?? ""} />

@@ -25,7 +25,7 @@ export default async function MyLinksPage({ searchParams }: PageProps<"/my-links
           did not work, use <b>Report bad key</b> so it is retired and the admin sees it.
         </p>
         </div>
-        <div className="flex gap-1">
+        <div className="mobile-tabs flex max-w-full gap-1 overflow-x-auto">
           {([["all", "All"], ["active", "Waiting"], ["expired", "Expired, never opened"]] as const).map(([v, label]) => (
             <Link key={v} href={v === "all" ? "/my-links" : `/my-links?view=${v}`} className={`btn btn-sm ${view === v ? "border-accent text-accent" : ""}`}>
               {label}

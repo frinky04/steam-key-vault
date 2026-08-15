@@ -69,7 +69,7 @@ export function LinksTable({ rows, now }: { rows: Row[]; now: number }) {
           )}
         </div>
       )}
-      <div className="overflow-x-auto rounded-md border border-border">
+      <div className="hidden overflow-x-auto rounded-md border border-border sm:block">
         <table className="w-full text-sm">
           <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
             <tr>
@@ -139,6 +139,36 @@ export function LinksTable({ rows, now }: { rows: Row[]; now: number }) {
             })}
           </tbody>
         </table>
+      </div>
+      <div className="space-y-2 sm:hidden">
+        {rows.map((r) => {
+          const st = linkState(r, now);
+          const isActive = st.label.startsWith("Live");
+          return (
+            <article key={r.id} className={`card space-y-3 ${selected.has(r.id) ? "border-accent bg-accent/5" : ""}`}>
+              <div className="flex items-start gap-3">
+                {isActive && <input className="mt-1" type="checkbox" checked={selected.has(r.id)} onChange={() => setSelected((s) => { const n = new Set(s); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; })} aria-label={`Select link for ${r.appName}`} />}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <Link href={`/apps/${r.appId}`} className="font-medium hover:text-accent">{r.appNames.length > 1 ? r.appNames.join(" + ") : r.appName}</Link>
+                    <span className={`shrink-0 text-xs font-medium ${st.cls}`}>{st.label}</span>
+                  </div>
+                  <p className="mt-1 font-mono text-xs text-muted">{r.keyCount > 1 ? `${r.keyCount} keys` : `…${r.keyHints[0]}`}</p>
+                </div>
+              </div>
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border pt-3 text-xs">
+                <div><dt className="text-muted">For</dt><dd className="mt-0.5 text-sm">{r.label ?? "—"}</dd></div>
+                <div><dt className="text-muted">By</dt><dd className="mt-0.5 text-sm">{r.createdByName ?? "—"}</dd></div>
+                <div><dt className="text-muted">Created</dt><dd className="mt-0.5"><LocalTime value={r.createdAt} /></dd></div>
+                <div><dt className="text-muted">Opened</dt><dd className="mt-0.5"><LocalTime value={r.revealedAt} /></dd></div>
+              </dl>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-1">{[...new Set(r.keyStatuses)].map((s) => <StatusBadge key={s} status={s} />)}</div>
+                {isActive && <button className="btn btn-sm btn-danger" disabled={pending} onClick={() => revoke([r.id])}>Revoke</button>}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </div>
   );

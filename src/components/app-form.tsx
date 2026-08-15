@@ -56,7 +56,7 @@ export function AppForm({ mode, initial, onDone }: Props) {
     <form onSubmit={submit} className="space-y-4">
       <div>
         <label className="label">Steam App ID</label>
-        <div className="flex gap-2">
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
           <input
             className="input font-mono"
             inputMode="numeric"
@@ -87,7 +87,7 @@ export function AppForm({ mode, initial, onDone }: Props) {
         <textarea className="input min-h-20" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Region locks, expiry, where keys came from…" />
       </div>
       {error && <p className="text-sm text-danger">{error}</p>}
-      <div className="flex gap-2">
+      <div className="modal-actions flex gap-2 sm:justify-end">
         <button className="btn btn-primary" disabled={pending}>
           {pending ? "Saving…" : mode === "create" ? "Create app" : "Save"}
         </button>

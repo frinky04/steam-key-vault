@@ -13,8 +13,8 @@ export function LinksResult({ links, onClose }: { links: CreatedLink[]; onClose:
         These URLs are shown once. Copy them now. Anyone with a link can claim its key, so paste them where only the
         recipient sees them.
       </p>
-      <div className="max-h-[50vh] overflow-auto rounded-md border border-border">
-        <table className="w-full text-sm">
+      <div className="max-h-[50vh] overflow-x-auto rounded-md border border-border">
+        <table className="result-table w-full text-sm">
           <tbody>
             {links.map((l) => (
               <tr key={l.linkId} className="border-b border-border last:border-0">
@@ -30,7 +30,7 @@ export function LinksResult({ links, onClose }: { links: CreatedLink[]; onClose:
           </tbody>
         </table>
       </div>
-      <div className="flex justify-end gap-2">
+      <div className="modal-actions flex justify-end gap-2">
         <button
           className="btn"
           onClick={async () => {

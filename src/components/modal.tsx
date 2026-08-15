@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export function Modal({
   open,
@@ -15,11 +15,18 @@ export function Modal({
   children: React.ReactNode;
   wide?: boolean;
 }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    closeRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open, onClose]);
 
   if (!open) return null;
@@ -34,7 +41,7 @@ export function Modal({
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 id="modal-title" className="font-semibold">{title}</h2>
-          <button className="btn btn-sm" onClick={onClose} aria-label="Close">
+          <button ref={closeRef} className="btn btn-sm" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>

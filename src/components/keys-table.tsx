@@ -145,7 +145,7 @@ export function KeysTable({ rows, total, page, pageSize, now }: Props) {
   return (
     <div className="space-y-2">
       {/* Bulk bar */}
-      <div className="sticky top-12 z-10 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm">
+      <div className="bulk-toolbar sticky top-12 z-10 flex flex-wrap items-center gap-2 rounded-md border border-border bg-surface/95 px-3 py-2 text-sm shadow-sm backdrop-blur">
         <span className="text-muted">
           {selected.size > 0 ? `${selected.size} selected` : `${total} keys`}
         </span>
@@ -178,7 +178,7 @@ export function KeysTable({ rows, total, page, pageSize, now }: Props) {
         {msg && <span className="ml-auto text-accent">{msg}</span>}
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-border">
+      <div className="hidden overflow-x-auto rounded-md border border-border sm:block">
         <table className="w-full text-sm">
           <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
             <tr>
@@ -243,6 +243,52 @@ export function KeysTable({ rows, total, page, pageSize, now }: Props) {
         </table>
       </div>
 
+      <div className="space-y-2 sm:hidden">
+        <label className="flex min-h-10 items-center gap-2 px-1 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={(e) => setSelected(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())}
+          />
+          Select all {rows.length} on this page
+        </label>
+        {rows.map((r) => {
+          const full = revealed.get(r.id);
+          return (
+            <article key={r.id} className={`card space-y-3 ${selected.has(r.id) ? "border-accent bg-accent/5" : ""}`}>
+              <div className="flex items-start gap-3">
+                <input className="mt-1" type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} aria-label={`Select key ending ${r.keyHint}`} />
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <StatusBadge status={r.status} />
+                    <span className="text-xs text-muted"><LocalTime value={r.updatedAt} /></span>
+                  </div>
+                  {full ? (
+                    <div className="space-y-2">
+                      <div className="select-all break-all font-mono text-sm text-foreground">{full}</div>
+                      <div className="mobile-record-actions flex gap-2">
+                        <CopyButton text={full} label="Copy key" className="btn btn-sm" />
+                        <button className="btn btn-sm" onClick={() => setRevealed((m) => { const n = new Map(m); n.delete(r.id); return n; })}>Hide</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button className="min-h-9 font-mono text-sm text-muted" onClick={() => reveal([r.id])} title="Reveal (logged)">
+                      •••••-•••••-{r.keyHint} <span className="ml-1 text-xs text-accent">Reveal</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border pt-3 text-xs">
+                <div><dt className="text-muted">Assignee</dt><dd className="mt-0.5 min-h-5 text-sm" onClick={() => editMeta(r, "assignee")}>{r.assignee ?? "Add assignee"}</dd></div>
+                <div><dt className="text-muted">Batch</dt><dd className="mt-0.5 text-sm">{r.batchName ?? "—"}</dd></div>
+                <div className="col-span-2"><dt className="text-muted">Note</dt><dd className="mt-0.5 min-h-5 truncate text-sm" onClick={() => editMeta(r, "note")}>{r.note ?? "Add note"}</dd></div>
+                {r.activeLinkExpiresAt && <div className="col-span-2 text-muted">Live link · {timeUntil(r.activeLinkExpiresAt, now)}</div>}
+              </dl>
+            </article>
+          );
+        })}
+      </div>
+
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm text-muted">
           <span>
@@ -275,7 +321,7 @@ export function KeysTable({ rows, total, page, pageSize, now }: Props) {
                 </label>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="mobile-form-grid grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Label (who)</label>
                 <input className="input" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="optional" />
@@ -283,7 +329,7 @@ export function KeysTable({ rows, total, page, pageSize, now }: Props) {
               <ExpiryField ttl={ttl} setTtl={setTtl} noExpiry={noExpiry} setNoExpiry={setNoExpiry} />
             </div>
             {linkError && <p className="text-sm text-danger">{linkError}</p>}
-            <div className="flex justify-end gap-2">
+            <div className="modal-actions flex justify-end gap-2">
               <button type="button" className="btn" onClick={() => setLinkModal(false)}>
                 Cancel
               </button>
@@ -299,7 +345,7 @@ export function KeysTable({ rows, total, page, pageSize, now }: Props) {
         {revealModal && (
           <div className="space-y-3">
             <textarea readOnly className="input min-h-40 font-mono text-xs" value={revealModal.map((k) => k.key).join("\n")} />
-            <div className="flex justify-end gap-2">
+            <div className="modal-actions flex justify-end gap-2">
               <CopyButton text={revealModal.map((k) => k.key).join("\n")} label={`Copy ${revealModal.length}`} className="btn" />
               <button className="btn btn-primary" onClick={() => setRevealModal(null)}>
                 Close

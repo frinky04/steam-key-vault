@@ -49,7 +49,8 @@ export default async function ActivityPage() {
       {rows.length === 0 ? (
         <EmptyState title="Nothing yet" />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-border">
+        <>
+        <div className="hidden overflow-x-auto rounded-md border border-border sm:block">
           <table className="w-full text-sm">
             <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
               <tr>
@@ -86,6 +87,23 @@ export default async function ActivityPage() {
             </tbody>
           </table>
         </div>
+        <div className="space-y-2 sm:hidden">
+          {rows.map((r) => (
+            <article key={r.id} className="card space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="font-medium">{ACTION_LABEL[r.action] ?? r.action}</h2>
+                <LocalTime value={r.createdAt} className="shrink-0 text-xs text-muted" />
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+                {r.userName && <span>{r.userName}</span>}
+                {r.appId && <Link href={`/apps/${r.appId}`} className="text-accent">{r.appName ?? `#${r.appId}`}</Link>}
+                {r.keyHint && <span className="font-mono">…{r.keyHint}</span>}
+              </div>
+              {r.details && <p className="break-words border-t border-border pt-2 font-mono text-xs text-muted">{summarize(r.details)}{r.ip && r.action === "link.claimed" ? ` · ${r.ip}` : ""}</p>}
+            </article>
+          ))}
+        </div>
+        </>
       )}
     </div>
   );

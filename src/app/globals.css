@@ -47,6 +47,7 @@ body {
 button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button, a { touch-action: manipulation; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type="checkbox"], input[type="radio"] { width: 1.125rem; height: 1.125rem; accent-color: var(--accent-strong); }
 
 @layer components {
   .btn {
@@ -88,7 +89,6 @@ button, a { touch-action: manipulation; }
     padding: 0.375rem 1rem 0.625rem;
     scrollbar-width: none;
     scroll-snap-type: x proximity;
-    mask-image: linear-gradient(to right, transparent, black 1rem, black calc(100% - 1rem), transparent);
   }
   .mobile-nav::-webkit-scrollbar { display: none; }
   .mobile-nav a {
@@ -100,22 +100,33 @@ button, a { touch-action: manipulation; }
     scroll-snap-align: start;
   }
   main, main > * { min-width: 0; }
-  .card .grid-cols-2,
-  .card .grid-cols-3 { grid-template-columns: minmax(0, 1fr); }
-  .card .justify-end { flex-wrap: wrap; }
-  .card .justify-end > .btn { flex: 1 1 auto; }
-  .overflow-x-auto {
-    margin-inline: -1rem;
-    width: calc(100% + 2rem);
-    border-inline: 0;
-    border-radius: 0;
-    overscroll-behavior-inline: contain;
-    scrollbar-width: thin;
-  }
-  .overflow-x-auto > table { min-width: 42rem; }
-  td, th { max-width: min(16rem, 70vw); }
   .font-mono { overflow-wrap: anywhere; }
   .select-all.font-mono { font-size: clamp(0.9rem, 4.5vw, 1.25rem); letter-spacing: 0.04em; }
+  .bulk-toolbar { top: calc(env(safe-area-inset-top) + 6.25rem); }
+  .mobile-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .modal-actions { flex-direction: column-reverse; }
+  .modal-actions > .btn { width: 100%; }
+  .mobile-record-actions > .btn { flex: 1 1 0; }
+  .mobile-tabs {
+    margin-inline: -0.25rem;
+    width: calc(100% + 0.5rem);
+    padding: 0.25rem;
+    scrollbar-width: none;
+  }
+  .mobile-tabs::-webkit-scrollbar { display: none; }
+  .mobile-tabs > * { flex: none; }
+  .result-table,
+  .result-table tbody,
+  .result-table tr,
+  .result-table td { display: block; width: 100%; }
+  .result-table tr { position: relative; padding: 0.75rem 3.75rem 0.75rem 0; }
+  .result-table td { padding-block: 0; }
+  .result-table td:nth-child(2) { margin-top: 0.375rem; }
+  .result-table td:last-child { position: absolute; right: 0.5rem; top: 0.625rem; width: auto; padding: 0; }
+}
+
+@media (min-width: 640px) {
+  .modal-actions { flex-direction: row; }
 }
 
 @media (prefers-reduced-motion: reduce) {
