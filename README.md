@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Steam Keys
 
-## Getting Started
+Self-hosted vault for storing Steam keys and handing them out via single-use links — without ever double-issuing one.
 
-First, run the development server:
+- **Encrypted at rest** (AES-256-GCM), deduped by hash, grouped by Steam App ID with store artwork
+- **Claim links**: key is revealed only when the recipient clicks *Reveal* (link previewers can't burn it); atomic — exactly one visitor wins; optional expiry; revoke returns the key to the pool
+- **Bulk import** from paste or `.txt`/`.csv` (incl. Steamworks exports), bulk mark used/invalid, export
+- **Roles**: admins do everything; **devs** get a simple *Send keys* page with per-user daily/batch limits, see only their own links, and can report bad keys
+- **Audit log** for every import, reveal, status change, claim and sign-in
+- Rich Discord/Slack link previews (game art, no key leakage)
+
+Built with Next.js 16, Postgres + Drizzle, Tailwind. One container, deploys to Railway in minutes.
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env          # fill in DATABASE_URL, ADMIN_PASSWORD
+pnpm gen-secrets              # → SESSION_SECRET, MASTER_KEY (paste into .env)
+pnpm db:migrate
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 → `/setup` creates the first admin (setup code = `ADMIN_PASSWORD`). Invite others from **Users**.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy (Railway)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. New project → add **Postgres** → add this repo as a service (Dockerfile is auto-detected, `railway.json` sets the health check).
+2. Variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `MASTER_KEY`, `PORT=3000`, optionally `APP_URL`, `SENDER_NAME`.
+3. Generate a domain. Migrations run on boot.
 
-## Learn More
+**Back up `MASTER_KEY`** — without it stored keys are unrecoverable.
 
-To learn more about Next.js, take a look at the following resources:
+## Environment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Variable | Required | Purpose |
+|---|---|---|
+| `DATABASE_URL` | ✓ | Postgres connection string |
+| `ADMIN_PASSWORD` | ✓ | First-run setup code; afterwards a break-glass recovery login |
+| `SESSION_SECRET` | ✓ | Cookie/session secret |
+| `MASTER_KEY` | ✓ | 32-byte hex key encrypting stored Steam keys |
+| `APP_URL` | | Public base URL for claim/invite links |
+| `SENDER_NAME` | | Name in link previews (“*X* sent you a Steam key”) |
+| `SITE_NAME` | | Site label in previews (defaults to `APP_URL` host) |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+`pnpm dev` · `pnpm build` · `pnpm db:generate` (new migration from schema) · `pnpm db:migrate` · `pnpm gen-secrets` · `node scripts/smoke.mjs` (Playwright E2E against a running server)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Steam offers no API to validate unredeemed keys; the app recognises the `XXXXX-XXXXX-XXXXX` shape and dedupes.
+- Link URLs are never stored (only a hash) — if lost, revoke and re-issue.
+- Devs never see raw keys; only admins can reveal/export.

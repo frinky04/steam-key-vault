@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local key exports / scratch — NEVER commit real keys
+/tmp/
+*.keys.txt
+!.env.example
