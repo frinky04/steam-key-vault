@@ -7,6 +7,7 @@ Self-hosted vault for storing Steam keys and handing them out via single-use lin
 - **Bulk import** from paste or `.txt`/`.csv` (incl. Steamworks exports), bulk mark used/invalid, export
 - **Roles**: admins do everything; **devs** get a simple *Send keys* page with per-user daily/batch limits, see only their own links, and can report bad keys
 - **Audit log** for every import, reveal, status change, claim and sign-in
+- **Discord feed** (webhook): key claimed, bad key reported, low stock — optional
 - Rich Discord/Slack link previews (game art, no key leakage)
 
 Built with Next.js 16, Postgres + Drizzle, Tailwind. One container, deploys to Railway in minutes.
@@ -26,8 +27,8 @@ Open http://localhost:3000 → `/setup` creates the first admin (setup code = `A
 ## Deploy (Railway)
 
 1. New project → add **Postgres** → add this repo as a service (Dockerfile is auto-detected, `railway.json` sets the health check).
-2. Variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `MASTER_KEY`, `PORT=3000`, optionally `APP_URL`, `SENDER_NAME`.
-3. Generate a domain. Migrations run on boot.
+2. Variables: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `MASTER_KEY`, `PORT=3000`, `APP_URL` (required in production).
+3. Add a domain. Migrations run on boot; pushes to the connected branch auto-deploy.
 
 **Back up `MASTER_KEY`** — without it stored keys are unrecoverable.
 
@@ -42,6 +43,9 @@ Open http://localhost:3000 → `/setup` creates the first admin (setup code = `A
 | `APP_URL` | | Public base URL for claim/invite links |
 | `SENDER_NAME` | | Name in link previews (“*X* sent you a Steam key”) |
 | `SITE_NAME` | | Site label in previews (defaults to `APP_URL` host) |
+| `DISCORD_WEBHOOK_URL` | | Enables the Discord feed |
+| `DISCORD_EVENTS` | | `claim,report,stock` by default; add `send` for link-creation posts |
+| `LOW_STOCK_THRESHOLD` | | Low-stock alert level (default 5) |
 
 ## Scripts
 
