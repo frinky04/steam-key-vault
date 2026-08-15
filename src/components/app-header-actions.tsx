@@ -49,7 +49,7 @@ export function AppHeaderActions({ app, counts }: { app: App; counts: Record<Key
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="mobile-record-actions flex w-full flex-wrap gap-2 sm:w-auto">
       <button className="btn btn-primary btn-sm" onClick={() => { setLinks(null); setLinkModal(true); }} disabled={counts.available === 0}>
         Generate links
       </button>
@@ -86,7 +86,7 @@ export function AppHeaderActions({ app, counts }: { app: App; counts: Record<Key
               Pulls the next available keys from the pool and creates one single-use link per key. Keys are marked
               <b> reserved</b> until the link is opened (→ claimed), revoked, or expires (→ back to available).
             </p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="mobile-form-grid grid grid-cols-3 gap-3">
               <div>
                 <label className="label">How many keys</label>
                 <input className="input" type="number" min={1} max={Math.min(500, counts.available)} value={count} onChange={(e) => setCount(e.target.value)} />
@@ -106,7 +106,7 @@ export function AppHeaderActions({ app, counts }: { app: App; counts: Record<Key
               <ExpiryField ttl={ttl} setTtl={setTtl} noExpiry={noExpiry} setNoExpiry={setNoExpiry} />
             </div>
             {error && <p className="text-sm text-danger">{error}</p>}
-            <div className="flex justify-end gap-2">
+            <div className="modal-actions flex justify-end gap-2">
               <button type="button" className="btn" onClick={() => setLinkModal(false)}>
                 Cancel
               </button>

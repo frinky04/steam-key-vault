@@ -27,7 +27,7 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
           <h1 className="text-xl font-semibold">Claim links</h1>
           <p className="text-sm text-muted">{tab.blurb} Link URLs are not stored; if one is lost, revoke it and make a new one.</p>
         </div>
-        <div className="flex gap-1">
+        <div className="mobile-tabs flex max-w-full gap-1 overflow-x-auto">
           {TABS.map((t) => (
             <Link key={t.view} href={t.view === "active" ? "/links" : `/links?view=${t.view}`} className={`btn btn-sm ${view === t.view ? "border-accent text-accent" : ""}`}>
               {t.label}

@@ -30,8 +30,8 @@ export function KeyFilters({ counts, batches, current }: Props) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex flex-wrap gap-1">
+    <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+      <div className="flex gap-1 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
         <button className={`btn btn-sm ${current.status === "all" ? "border-accent text-accent" : ""}`} onClick={() => push({ status: "all" })}>
           All <span className="text-muted">{total}</span>
         </button>
@@ -46,7 +46,7 @@ export function KeyFilters({ counts, batches, current }: Props) {
         ))}
       </div>
       <select
-        className="input w-auto"
+        className="input w-full sm:w-auto"
         value={current.batchId ?? ""}
         onChange={(e) => push({ batch: e.target.value })}
       >
@@ -64,7 +64,7 @@ export function KeyFilters({ counts, batches, current }: Props) {
           push({ q });
         }}
       >
-        <input className="input w-48" placeholder="Search assignee / note / hint" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className="input min-w-0 flex-1 sm:w-48" placeholder="Search assignee / note / hint" value={q} onChange={(e) => setQ(e.target.value)} />
         <button className="btn btn-sm">Go</button>
         {current.q && (
           <button type="button" className="btn btn-sm" onClick={() => { setQ(""); push({ q: "" }); }}>

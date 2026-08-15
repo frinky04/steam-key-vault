@@ -81,12 +81,12 @@ export function UsersManager({ users, meId, now }: { users: UserRow[]; meId: num
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <button className="btn btn-primary" onClick={() => { setError(null); setInviteOpen(true); }}>
+        <button className="btn btn-primary w-full sm:w-auto" onClick={() => { setError(null); setInviteOpen(true); }}>
           + Invite user
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-border">
+      <div className="hidden overflow-x-auto rounded-md border border-border sm:block">
         <table className="w-full text-sm">
           <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
             <tr>
@@ -143,9 +143,41 @@ export function UsersManager({ users, meId, now }: { users: UserRow[]; meId: num
         </table>
       </div>
 
+      <div className="space-y-2 sm:hidden">
+        {users.map((u) => {
+          const disabled = !!u.disabledAt;
+          const inviteLive = !u.hasPassword && u.inviteExpiresAt && new Date(u.inviteExpiresAt).getTime() > now;
+          return (
+            <article key={u.id} className={`card space-y-3 ${disabled ? "opacity-60" : ""}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="font-medium">{u.name}{u.id === meId && <span className="ml-1 text-xs text-muted">(you)</span>}</h2>
+                  <p className="truncate text-xs text-muted">{u.email}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={`badge ${u.role === "admin" ? "bg-accent/15 text-accent" : "bg-muted/20 text-muted"}`}>{u.role}</span>
+                  {disabled ? <span className="text-xs text-danger">Disabled</span> : u.hasPassword ? <span className="text-xs text-ok">Active</span> : inviteLive ? <span className="text-xs text-warn">Invited</span> : <span className="text-xs text-danger">Expired</span>}
+                </div>
+              </div>
+              <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-xs">
+                <div><dt className="text-muted">Allowance</dt><dd className="mt-0.5">{u.role === "admin" ? "Unlimited" : `${u.dailyLinkLimit}/day · ${u.batchLinkLimit}/batch`}</dd></div>
+                <div><dt className="text-muted">Usage</dt><dd className="mt-0.5">{u.linksTotal} links · {u.linksToday} today</dd></div>
+                <div className="col-span-2"><dt className="text-muted">Last sign in</dt><dd className="mt-0.5"><LocalTime value={u.lastLoginAt} /></dd></div>
+              </dl>
+              <div className="mobile-record-actions flex flex-wrap gap-2">
+                <button className="btn btn-sm" disabled={pending} onClick={() => { setError(null); setEdit(u); }}>Edit</button>
+                <button className="btn btn-sm" disabled={pending} onClick={() => reset(u)}>{u.hasPassword ? "Reset password" : "New invite"}</button>
+                {u.id !== meId && <button className="btn btn-sm" disabled={pending} onClick={() => start(async () => { const r = await setUserDisabled(u.id, !disabled); if (!r.ok) alert(r.error); router.refresh(); })}>{disabled ? "Enable" : "Disable"}</button>}
+                {u.id !== meId && <button className="btn btn-sm btn-danger" disabled={pending} onClick={() => { if (confirm(`Delete ${u.name}? Their links stay but lose the creator name.`)) start(async () => { const r = await deleteUser(u.id); if (!r.ok) alert(r.error); router.refresh(); }); }}>Delete</button>}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
       <Modal open={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite user">
         <form onSubmit={invite} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="mobile-form-grid grid grid-cols-2 gap-3">
             <div>
               <label className="label">Name</label>
               <input className="input" required value={name} onChange={(e) => setName(e.target.value)} />
@@ -163,7 +195,7 @@ export function UsersManager({ users, meId, now }: { users: UserRow[]; meId: num
             </select>
           </div>
           {role === "dev" && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="mobile-form-grid grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Keys / day</label>
                 <input className="input" type="number" min={0} value={daily} onChange={(e) => setDaily(e.target.value)} />
@@ -176,7 +208,7 @@ export function UsersManager({ users, meId, now }: { users: UserRow[]; meId: num
           )}
           {error && <p className="text-sm text-danger">{error}</p>}
           <p className="text-xs text-muted">You will get a one-time invite link (valid 7 days) to send them however you like.</p>
-          <div className="flex justify-end gap-2">
+          <div className="modal-actions flex justify-end gap-2">
             <button type="button" className="btn" onClick={() => setInviteOpen(false)}>Cancel</button>
             <button className="btn btn-primary" disabled={pending}>{pending ? "Creating…" : "Create invite"}</button>
           </div>
@@ -188,7 +220,7 @@ export function UsersManager({ users, meId, now }: { users: UserRow[]; meId: num
           <div className="space-y-3">
             <p className="text-sm text-warn">Shown once. Send it to them privately — anyone with this link can set the account password.</p>
             <div className="rounded-md border border-border bg-background p-2 font-mono text-xs break-all">{inviteUrl.url}</div>
-            <div className="flex justify-end gap-2">
+            <div className="modal-actions flex justify-end gap-2">
               <CopyButton text={inviteUrl.url} label="Copy link" className="btn" />
               <button className="btn btn-primary" onClick={() => setInviteUrl(null)}>Done</button>
             </div>
@@ -211,7 +243,7 @@ export function UsersManager({ users, meId, now }: { users: UserRow[]; meId: num
               </select>
             </div>
             {edit.role === "dev" && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="mobile-form-grid grid grid-cols-2 gap-3">
                 <div>
                   <label className="label">Keys / day</label>
                   <input className="input" type="number" min={0} value={edit.dailyLinkLimit} onChange={(e) => setEdit({ ...edit, dailyLinkLimit: Number(e.target.value) })} />
@@ -223,7 +255,7 @@ export function UsersManager({ users, meId, now }: { users: UserRow[]; meId: num
               </div>
             )}
             {error && <p className="text-sm text-danger">{error}</p>}
-            <div className="flex justify-end gap-2">
+            <div className="modal-actions flex justify-end gap-2">
               <button type="button" className="btn" onClick={() => setEdit(null)}>Cancel</button>
               <button className="btn btn-primary" disabled={pending}>Save</button>
             </div>

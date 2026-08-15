@@ -74,7 +74,7 @@ export function SendKeys({ apps, limits }: { apps: AppOpt[]; limits: Limits }) {
 
       <div className="card space-y-3 self-start">
         <div className="text-sm font-medium">{app.name}</div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="mobile-form-grid grid grid-cols-2 gap-3">
           <div>
             <label className="label">How many keys</label>
             <input className="input" type="number" min={1} max={maxCount} value={count} onChange={(e) => setCount(e.target.value)} disabled={blocked || app.available === 0} />

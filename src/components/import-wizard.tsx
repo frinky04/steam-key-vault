@@ -121,7 +121,7 @@ export function ImportWizard({ apps, preselect }: { apps: AppOpt[]; preselect?: 
           onDragLeave={() => setDrag(false)}
           onDrop={(e) => { e.preventDefault(); setDrag(false); addFiles(e.dataTransfer.files); }}
         >
-          <div className="mb-2 flex items-center justify-between text-sm">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="text-muted">Drop files here, or</span>
             <div className="flex gap-2">
               <button className="btn btn-sm" onClick={() => fileRef.current?.click()}>
@@ -212,7 +212,7 @@ export function ImportWizard({ apps, preselect }: { apps: AppOpt[]; preselect?: 
         )}
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex items-center justify-end gap-3">
-          <button className="btn btn-primary" disabled={importing || parsed.keys.length === 0} onClick={doImport}>
+          <button className="btn btn-primary w-full sm:w-auto" disabled={importing || parsed.keys.length === 0} onClick={doImport}>
             {importing ? "Importing…" : `Import ${newCount ?? parsed.keys.length} keys`}
           </button>
         </div>

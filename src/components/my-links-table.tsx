@@ -69,7 +69,7 @@ export function MyLinksTable({ rows, now }: { rows: Row[]; now: number }) {
   return (
     <div className="space-y-2">
       {msg && <p className="text-sm text-accent">{msg}</p>}
-      <div className="overflow-x-auto rounded-md border border-border">
+      <div className="hidden overflow-x-auto rounded-md border border-border sm:block">
         <table className="w-full text-sm">
           <thead className="bg-surface text-left text-xs uppercase tracking-wide text-muted">
             <tr>
@@ -114,6 +114,33 @@ export function MyLinksTable({ rows, now }: { rows: Row[]; now: number }) {
             })}
           </tbody>
         </table>
+      </div>
+      <div className="space-y-2 sm:hidden">
+        {rows.map((r) => {
+          const st = state(r, now);
+          const waiting = st.label.startsWith("Waiting");
+          return (
+            <article key={r.id} className="card space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="font-medium">{r.appName}</h2>
+                  <p className="mt-1 font-mono text-xs text-muted">{r.keyHints.length > 1 ? `${r.keyHints.length} keys` : `…${r.keyHints[0]}`}</p>
+                </div>
+                <span className={`shrink-0 text-xs font-medium ${st.cls}`}>{st.label}</span>
+              </div>
+              <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-xs">
+                <div><dt className="text-muted">For</dt><dd className="mt-0.5 text-sm">{r.label ?? "—"}</dd></div>
+                <div><dt className="text-muted">Created</dt><dd className="mt-0.5"><LocalTime value={r.createdAt} /></dd></div>
+              </dl>
+              {(waiting || (r.revealedAt && r.keyStatuses.some((s) => s !== "invalid"))) && (
+                <div className="mobile-record-actions flex gap-2">
+                  {waiting && <button className="btn btn-sm btn-danger" disabled={pending} onClick={() => revoke(r.id)}>Revoke</button>}
+                  {r.revealedAt && r.keyStatuses.some((s) => s !== "invalid") && <button className="btn btn-sm" disabled={pending} onClick={() => report(r)}>Report bad key</button>}
+                </div>
+              )}
+            </article>
+          );
+        })}
       </div>
     </div>
   );

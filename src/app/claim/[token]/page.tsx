@@ -38,7 +38,7 @@ export default async function ClaimPage({ params }: PageProps<"/claim/[token]">)
   const { token } = await params;
   const view = await getClaimView(token);
   return (
-    <main className="flex flex-1 items-center justify-center p-6">
+    <main className="flex flex-1 items-center justify-center px-4 py-6 sm:p-6">
       <ClaimCard token={token} initial={JSON.parse(JSON.stringify(view))} />
     </main>
   );

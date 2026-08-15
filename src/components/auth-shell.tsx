@@ -1,6 +1,6 @@
 export function AuthShell({ subtitle, children }: { subtitle: string; children: React.ReactNode }) {
   return (
-    <main className="flex flex-1 items-center justify-center p-6">
+    <main className="flex flex-1 items-center justify-center px-4 py-6 sm:p-6">
       <div className="card w-full max-w-sm">
         <div className="mb-3 flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
