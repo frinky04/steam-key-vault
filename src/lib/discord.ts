@@ -36,7 +36,7 @@ async function post(embed: Embed): Promise<void> {
   const base = env.APP_URL;
   const body = {
     username: process.env.DISCORD_USERNAME || "Steam Key Vault",
-    avatar_url: process.env.DISCORD_AVATAR_URL || (base ? `${base}/logo.png` : undefined),
+    avatar_url: process.env.DISCORD_AVATAR_URL || (base ? `${base}/avatar.png` : undefined),
     embeds: [{ footer: { text: "Steam Key Vault" }, timestamp: new Date().toISOString(), ...embed }],
   };
   try {
