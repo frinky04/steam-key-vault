@@ -19,11 +19,11 @@ const DEV: NavItem[] = [
   { href: "/my-links", label: "My links" },
 ];
 
-export function NavLinks({ role }: { role: UserRole }) {
+export function NavLinks({ role, className = "" }: { role: UserRole; className?: string }) {
   const path = usePathname();
   const links = role === "admin" ? ADMIN : DEV;
   return (
-    <nav className="flex items-center gap-1 text-sm">
+    <nav className={`flex items-center gap-1 text-sm ${className}`} aria-label="Primary navigation">
       {links.map((l) => {
         const active = l.match ? l.match(path) : path.startsWith(l.href);
         return (
