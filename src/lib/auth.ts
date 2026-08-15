@@ -8,7 +8,7 @@ import { sessions, users, type User, type UserRole } from "@/db/schema";
 import { env } from "./env";
 import { hashToken, newToken, safeEqual } from "./crypto";
 import { verifyPassword } from "./password";
-import { rateLimit } from "./rate-limit";
+import { rateLimitAll, rateLimitReset, retryText } from "./rate-limit";
 import { audit } from "./audit";
 
 export const SESSION_COOKIE = "sk_session";
@@ -29,10 +29,28 @@ const safeCols = {
   disabledAt: users.disabledAt,
 };
 
+/**
+ * Best-effort client IP. Prefer Cloudflare's header (set by the trusted edge in
+ * front of this app), then the LAST X-Forwarded-For entry (appended by the
+ * platform proxy, not attacker-controlled), then x-real-ip. Used for logging and
+ * as a secondary throttle key only; auth limits are per-account/global as well.
+ */
 export async function clientIp(): Promise<string> {
   const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
+  const cf = h.get("cf-connecting-ip")?.trim();
+  if (cf) return cf;
+  const xff = h.get("x-forwarded-for");
+  if (xff) {
+    const parts = xff.split(",").map((s) => s.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1];
+  }
+  return h.get("x-real-ip") || "unknown";
 }
+
+// Verified against when the email is unknown so response time does not reveal
+// whether an account exists (same scrypt cost as a real check).
+const DUMMY_HASH =
+  "scrypt$16384$8$1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 /** Resolve the current user from the session cookie. Cached per request. */
 export const getCurrentUser = cache(async (): Promise<SafeUser | null> => {
@@ -96,11 +114,18 @@ export type LoginResult = { ok: true; role: UserRole } | { ok: false; error: str
 export async function loginWithPassword(emailRaw: string, password: string): Promise<LoginResult> {
   const ip = await clientIp();
   const email = emailRaw.trim().toLowerCase();
-  const rl = rateLimit(`login:${ip}`, 8, 15 * 60 * 1000);
-  if (!rl.ok) return { ok: false, error: `Too many attempts. Try again in ${Math.ceil(rl.retryAfterMs / 60000)} min.` };
+  const WINDOW = 15 * 60 * 1000;
+  // Per-account lockout (cannot be dodged by changing IPs) + per-IP + global.
+  const rl = await rateLimitAll([
+    { key: `login:acct:${email}`, limit: 8, windowMs: WINDOW },
+    { key: `login:ip:${ip}`, limit: 20, windowMs: WINDOW },
+    { key: "login:global", limit: 300, windowMs: WINDOW },
+  ]);
+  if (!rl.ok) return { ok: false, error: retryText(rl) };
 
   const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  const ok = u ? await verifyPassword(password, u.passwordHash) : false;
+  // Always run scrypt so timing does not reveal whether the email exists.
+  const ok = await verifyPassword(password, u?.passwordHash ?? DUMMY_HASH);
   if (!u || !ok) {
     await audit("auth.login.failed", { ip, details: { email } });
     return { ok: false, error: "Wrong email or password." };
@@ -108,7 +133,7 @@ export async function loginWithPassword(emailRaw: string, password: string): Pro
   if (u.disabledAt) return { ok: false, error: "This account is disabled." };
   if (!u.passwordHash) return { ok: false, error: "This account has not accepted its invite yet." };
 
-  rateLimit(`login:${ip}`, 8, 15 * 60 * 1000, { reset: true });
+  await rateLimitReset(`login:acct:${email}`);
   await startSession(u.id);
   await audit("auth.login", { userId: u.id, ip });
   return { ok: true, role: u.role };
@@ -120,8 +145,12 @@ export async function loginWithPassword(emailRaw: string, password: string): Pro
  */
 export async function loginWithRecoveryPassword(password: string): Promise<LoginResult> {
   const ip = await clientIp();
-  const rl = rateLimit(`recovery:${ip}`, 5, 15 * 60 * 1000);
-  if (!rl.ok) return { ok: false, error: `Too many attempts. Try again in ${Math.ceil(rl.retryAfterMs / 60000)} min.` };
+  // Per-IP and a global cap: spoofing IPs buys nothing.
+  const rl = await rateLimitAll([
+    { key: `recovery:ip:${ip}`, limit: 5, windowMs: 15 * 60 * 1000 },
+    { key: "recovery:global", limit: 20, windowMs: 60 * 60 * 1000 },
+  ]);
+  if (!rl.ok) return { ok: false, error: retryText(rl) };
   if (!safeEqual(password, env.ADMIN_PASSWORD)) {
     await audit("auth.recovery.failed", { ip });
     return { ok: false, error: "Wrong recovery password." };

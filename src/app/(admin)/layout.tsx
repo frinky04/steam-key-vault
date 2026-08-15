@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/" className="flex items-center gap-2 font-semibold">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icon.svg" alt="" width={22} height={22} className="rounded-md" />
-            Steam Keys
+            Steam Key Vault
           </Link>
           <NavLinks role="admin" />
           <div className="ml-auto flex items-center gap-3">

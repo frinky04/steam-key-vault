@@ -63,6 +63,12 @@ export const sessions = pgTable(
   (t) => [uniqueIndex("sessions_token_uq").on(t.tokenHash), index("sessions_user_idx").on(t.userId)],
 );
 
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
 export const apps = pgTable("apps", {
   id: serial("id").primaryKey(),
   steamAppId: integer("steam_app_id").unique(),

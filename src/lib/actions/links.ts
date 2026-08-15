@@ -15,6 +15,8 @@ import type { ActionResult } from "./apps";
 export type CreatedLink = { keyId: number; keyHint: string; url: string; token: string; expiresAt: string };
 
 async function baseUrl(): Promise<string> {
+  if (process.env.NODE_ENV === "production") return env.PUBLIC_BASE_URL;
+  // Dev convenience only: reflect the request host so `pnpm dev -p 3111` works.
   if (env.APP_URL) return env.APP_URL;
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";

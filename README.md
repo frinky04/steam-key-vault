@@ -1,4 +1,4 @@
-# Steam Keys
+# Steam Key Vault
 
 Self-hosted vault for storing Steam keys and handing them out via single-use links — without ever double-issuing one.
 

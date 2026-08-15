@@ -8,8 +8,8 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   metadataBase: new URL(env.APP_URL ?? "http://localhost:3000"),
-  title: { default: "Steam Keys", template: "%s · Steam Keys" },
-  description: "Private Steam key vault and distribution",
+  title: { default: "Steam Key Vault", template: "%s · Steam Key Vault" },
+  description: "Store Steam keys, hand them out with single-use links",
   robots: { index: false, follow: false },
 };
 

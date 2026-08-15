@@ -13,7 +13,7 @@ export async function fetchSteamApp(appId: number): Promise<SteamAppInfo | null>
   try {
     const res = await fetch(
       `https://store.steampowered.com/api/appdetails?appids=${appId}&filters=basic`,
-      { next: { revalidate: 60 * 60 * 24 }, headers: { "User-Agent": "steamkey-tool" } },
+      { next: { revalidate: 60 * 60 * 24 }, headers: { "User-Agent": "steam-key-vault" } },
     );
     if (!res.ok) return null;
     const json = (await res.json()) as Record<

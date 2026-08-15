@@ -14,6 +14,8 @@ import type { ActionResult } from "./apps";
 const INVITE_TTL_MS = 7 * 24 * 3600 * 1000;
 
 async function baseUrl(): Promise<string> {
+  if (process.env.NODE_ENV === "production") return env.PUBLIC_BASE_URL;
+  // Dev convenience only: reflect the request host so `pnpm dev -p 3111` works.
   if (env.APP_URL) return env.APP_URL;
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";

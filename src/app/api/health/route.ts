@@ -9,6 +9,7 @@ export async function GET() {
     await db.execute(sql`select 1`);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 503 });
+    console.error("health check failed:", e);
+    return NextResponse.json({ ok: false }, { status: 503 });
   }
 }

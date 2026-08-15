@@ -5,7 +5,7 @@ export function AuthShell({ subtitle, children }: { subtitle: string; children: 
         <div className="mb-3 flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icon.svg" alt="" width={28} height={28} className="rounded-md" />
-          <h1 className="text-lg font-semibold">Steam Keys</h1>
+          <h1 className="text-lg font-semibold">Steam Key Vault</h1>
         </div>
         <p className="mb-4 text-sm text-muted">{subtitle}</p>
         {children}

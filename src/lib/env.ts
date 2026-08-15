@@ -32,6 +32,18 @@ export const env = {
     if (process.env.RAILWAY_PUBLIC_DOMAIN) return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
     return undefined;
   },
+  /**
+   * Base URL for links we hand out. In production this must come from config,
+   * never from request headers (which an attacker may control).
+   */
+  get PUBLIC_BASE_URL(): string {
+    const v = this.APP_URL;
+    if (v) return v;
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("APP_URL must be set in production (used to build claim/invite links).");
+    }
+    return "http://localhost:3000";
+  },
 };
 
 /** Name shown to recipients ("<SENDER_NAME> sent you a Steam key"). */
@@ -46,5 +58,5 @@ export function siteName(): string {
       return new URL(url).host;
     } catch {}
   }
-  return "Steam Keys";
+  return "Steam Key Vault";
 }

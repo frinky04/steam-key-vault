@@ -17,7 +17,7 @@ import { env } from "@/lib/env";
 import { hashToken, safeEqual } from "@/lib/crypto";
 import { hashPassword, passwordProblem } from "@/lib/password";
 import { audit } from "@/lib/audit";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitAll, retryText } from "@/lib/rate-limit";
 
 export type FormState = { error?: string; values?: Record<string, string> };
 
@@ -49,8 +49,11 @@ export async function logoutAction(): Promise<void> {
 export async function setupAction(_prev: FormState, formData: FormData): Promise<FormState> {
   if (!(await needsSetup())) return { error: "Setup has already been completed." };
   const ip = await clientIp();
-  const rl = rateLimit(`setup:${ip}`, 5, 15 * 60 * 1000);
-  if (!rl.ok) return { error: "Too many attempts. Try again later." };
+  const rl = await rateLimitAll([
+    { key: `setup:ip:${ip}`, limit: 5, windowMs: 15 * 60 * 1000 },
+    { key: "setup:global", limit: 20, windowMs: 60 * 60 * 1000 },
+  ]);
+  if (!rl.ok) return { error: retryText(rl) };
 
   const setupCode = String(formData.get("setupCode") ?? "");
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -91,8 +94,11 @@ export async function acceptInviteAction(_prev: FormState, formData: FormData): 
   const token = String(formData.get("token") ?? "");
   const password = String(formData.get("password") ?? "");
   const ip = await clientIp();
-  const rl = rateLimit(`invite:${ip}`, 10, 15 * 60 * 1000);
-  if (!rl.ok) return { error: "Too many attempts. Try again later." };
+  const rl = await rateLimitAll([
+    { key: `invite:ip:${ip}`, limit: 10, windowMs: 15 * 60 * 1000 },
+    { key: "invite:global", limit: 60, windowMs: 60 * 60 * 1000 },
+  ]);
+  if (!rl.ok) return { error: retryText(rl) };
   const pp = passwordProblem(password);
   if (pp) return { error: pp };
   if (!/^[A-Za-z0-9_-]{20,80}$/.test(token)) return { error: "Invalid invite link." };
