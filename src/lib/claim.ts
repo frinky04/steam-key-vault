@@ -5,6 +5,8 @@ import { db } from "@/db";
 import { apps, claimLinks, keys } from "@/db/schema";
 import { decryptKey, hashToken, safeEqual } from "@/lib/crypto";
 import { audit } from "@/lib/audit";
+import { notifyClaimed } from "@/lib/discord";
+import { users } from "@/db/schema";
 
 export const CLAIM_GRACE_MS = 24 * 60 * 60 * 1000; // re-view window after reveal
 
@@ -116,14 +118,14 @@ export async function consumeClaim(
           sql`${claimLinks.expiresAt} > now()`,
         ),
       )
-      .returning({ id: claimLinks.id, keyId: claimLinks.keyId, label: claimLinks.label });
+      .returning({ id: claimLinks.id, keyId: claimLinks.keyId, label: claimLinks.label, createdByUserId: claimLinks.createdByUserId });
     if (!won) return null;
 
     const [k] = await tx
       .update(keys)
       .set({ status: "claimed", assignee: won.label ?? undefined, updatedAt: new Date() })
       .where(eq(keys.id, won.keyId))
-      .returning({ appId: keys.appId });
+      .returning({ appId: keys.appId, keyHint: keys.keyHint });
     await audit("link.claimed", {
       appId: k?.appId,
       keyId: won.keyId,
@@ -131,10 +133,31 @@ export async function consumeClaim(
       details: { linkId: won.id, label: won.label, ua: meta.userAgent.slice(0, 120) },
       tx,
     });
-    return won;
+
+    // Feed data for the Discord notification (best-effort, inside the tx for consistency).
+    let senderName: string | null = null;
+    if (won.createdByUserId) {
+      const [u] = await tx.select({ name: users.name }).from(users).where(eq(users.id, won.createdByUserId));
+      senderName = u?.name ?? null;
+    }
+    const [app] = k ? await tx.select({ name: apps.name }).from(apps).where(eq(apps.id, k.appId)) : [];
+    const [{ remaining }] = k
+      ? await tx
+          .select({ remaining: sql<number>`count(*)::int` })
+          .from(keys)
+          .where(and(eq(keys.appId, k.appId), eq(keys.status, "available")))
+      : [{ remaining: 0 }];
+    return { ...won, appName: app?.name ?? "Unknown app", keyHint: k?.keyHint ?? "", senderName, remaining };
   });
 
   if (result) {
+    notifyClaimed({
+      appName: result.appName,
+      label: result.label,
+      senderName: result.senderName,
+      keyHint: result.keyHint,
+      remaining: result.remaining,
+    });
     const jar = await cookies();
     jar.set(graceCookieName(tokenHash), token, {
       httpOnly: true,

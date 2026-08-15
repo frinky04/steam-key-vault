@@ -7,6 +7,8 @@ import { claimLinks, keys } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { hashToken, newToken } from "@/lib/crypto";
 import { NO_EXPIRY } from "@/lib/expiry";
+import { lowStockThreshold, notifyBadKey, notifyLowStock, notifySent } from "@/lib/discord";
+import { apps } from "@/db/schema";
 import { auditMany, audit } from "@/lib/audit";
 import { env } from "@/lib/env";
 import { headers } from "next/headers";
@@ -69,7 +71,13 @@ export async function createClaimLinks(input: {
     return { ok: false, error: `You can create at most ${user.batchLinkLimit} links at once.` };
   }
 
-  const result = await db.transaction(async (tx): Promise<{ error: string } | { created: CreatedLink[]; appIds: number[] }> => {
+  const result = await db.transaction(
+    async (
+      tx,
+    ): Promise<
+      | { error: string }
+      | { created: CreatedLink[]; appIds: number[]; stock: { appId: number; appName: string; remaining: number; taken: number }[] }
+    > => {
     let selected: { id: number; keyHint: string; appId: number }[];
 
     if (isDev) {
@@ -134,6 +142,20 @@ export async function createClaimLinks(input: {
       { tx, userId: user.id },
     );
 
+    // Stock levels per app after this reservation (for the Discord feed).
+    const appIds = [...new Set(selected.map((k) => k.appId))];
+    const stock: { appId: number; appName: string; remaining: number; taken: number }[] = [];
+    for (const appId of appIds) {
+      const [row] = await tx
+        .select({
+          name: apps.name,
+          remaining: sql<number>`(select count(*)::int from ${keys} k where k.app_id = ${apps.id} and k.status = 'available')`,
+        })
+        .from(apps)
+        .where(eq(apps.id, appId));
+      if (row) stock.push({ appId, appName: row.name, remaining: row.remaining, taken: selected.filter((k) => k.appId === appId).length });
+    }
+
     return {
       created: rows.map<CreatedLink>((r) => ({
         keyId: r.k.id,
@@ -142,11 +164,18 @@ export async function createClaimLinks(input: {
         url: `${base}/claim/${r.token}`,
         expiresAt: expiresAt.toISOString(),
       })),
-      appIds: selected.map((k) => k.appId),
+      appIds,
+      stock,
     };
   });
 
   if ("error" in result) return { ok: false, error: result.error };
+  const threshold = lowStockThreshold();
+  for (const s of result.stock) {
+    notifySent({ appName: s.appName, count: s.taken, senderName: user.name, label, remaining: s.remaining });
+    // Only fire when this batch crossed the line, so a low pool does not spam on every send.
+    if (s.remaining <= threshold && s.remaining + s.taken > threshold) notifyLowStock({ appName: s.appName, remaining: s.remaining });
+  }
   revalidateAll(result.appIds);
   return { ok: true, data: result.created };
 }
@@ -191,7 +220,7 @@ export async function reportBadKey(linkId: number, note?: string): Promise<Actio
   const user = await requireUser();
   const ownership = user.role === "admin" ? undefined : eq(claimLinks.createdByUserId, user.id);
   const [link] = await db
-    .select({ id: claimLinks.id, keyId: claimLinks.keyId, revealedAt: claimLinks.revealedAt })
+    .select({ id: claimLinks.id, keyId: claimLinks.keyId, revealedAt: claimLinks.revealedAt, label: claimLinks.label })
     .from(claimLinks)
     .where(and(eq(claimLinks.id, linkId), ownership))
     .limit(1);
@@ -201,8 +230,12 @@ export async function reportBadKey(linkId: number, note?: string): Promise<Actio
     .update(keys)
     .set({ status: "invalid", note: note?.trim() ? `Reported bad: ${note.trim().slice(0, 200)}` : "Reported bad by recipient", updatedAt: new Date() })
     .where(eq(keys.id, link.keyId))
-    .returning({ appId: keys.appId });
+    .returning({ appId: keys.appId, keyHint: keys.keyHint });
   await audit("key.reported_bad", { userId: user.id, keyId: link.keyId, appId: k?.appId, details: { linkId, note: note?.trim() || undefined } });
+  if (k) {
+    const [app] = await db.select({ name: apps.name }).from(apps).where(eq(apps.id, k.appId));
+    notifyBadKey({ appName: app?.name ?? "Unknown app", keyHint: k.keyHint, reporterName: user.name, label: link.label, note: note?.trim() || undefined });
+  }
   revalidateAll(k ? [k.appId] : []);
   return { ok: true };
 }
