@@ -262,6 +262,39 @@ await page.goto(appUrl);
 const avail = await page.$$("tbody .badge:has-text('Available')");
 assert(avail.length === 2, "revoked link returned key to available (2 available)");
 
+step("multi-key link: bundle 2 keys on one link, claim reveals both");
+await page.goto(`${BASE}/import?app=${appId}`);
+const BUNDLE = [rk(), rk()];
+await page.fill("textarea", BUNDLE.join("\n"));
+await page.waitForSelector("text=all new");
+await page.click("button:has-text('Import')");
+await page.waitForSelector("text=Import complete");
+await page.goto(`${appUrl}?status=available`);
+await page.waitForSelector("table");
+await page.check("tbody tr:nth-last-child(1) input[type=checkbox]");
+await page.check("tbody tr:nth-last-child(2) input[type=checkbox]");
+await page.click("button:has-text('Create links')");
+await page.check("input[type=radio] >> nth=1"); // one link with all keys
+await page.click("form button:has-text('Create')");
+await page.waitForSelector("text=Links created");
+const bundleUrls = await page.$$eval("td.break-all", (t) => t.map((x) => x.textContent.trim()));
+assert(bundleUrls.length === 1, "bundle produced exactly one link");
+assert((await page.textContent("[role=dialog] tbody")).includes("2 keys"), "result row shows 2 keys");
+await page.click("button:has-text('Done')");
+{
+  const c = await browser.newContext(); const bp = await c.newPage();
+  await bp.goto(bundleUrls[0]);
+  await bp.waitForSelector("text=Reveal my 2 keys");
+  await bp.click("text=Reveal my 2 keys");
+  await bp.waitForSelector("text=Copy all 2 keys");
+  const shown = await bp.$$eval(".select-all", (els) => els.map((e) => e.textContent.trim()));
+  assert(shown.length === 2 && BUNDLE.every((k) => shown.includes(k)), "both bundled keys revealed");
+  await c.close();
+}
+await page.goto(`${BASE}/links?view=all`);
+await page.waitForSelector("td:has-text('2 keys')");
+assert(true, "links page shows the 2-key link");
+
 step("tools: mark used by paste (one known, one unknown)");
 await page.goto(`${BASE}/tools`);
 const unknown = rk();
@@ -317,20 +350,20 @@ step("dev: create 2 links (batch limit), then 1 more (daily=3), then denied");
 await dp.click(`button:has-text('${APP_NAME}')`);
 await dp.fill('input[type=number] >> nth=0', "2");
 await dp.fill('input[placeholder="e.g. Sam (beta tester)"]', "Tester A");
-await dp.click("button:has-text('Create 2 links')");
+await dp.click("button:has-text('Send 2 keys')");
 await dp.waitForSelector("text=2 links for");
 const devUrls = await dp.$$eval("td.break-all", (t) => t.map((x) => x.textContent.trim()));
 assert(devUrls.length === 2, "dev got 2 links");
 await dp.click("button:has-text('Done')");
-await dp.waitForSelector("button:has-text('Create 1 link')");
-await dp.waitForSelector("text=1 more today");
+await dp.waitForSelector("button:has-text('Send 1 key')");
+await dp.waitForSelector("text=1 more keys today");
 assert(true, "quota shows 1 remaining");
 await dp.fill('input[type=number] >> nth=0', "1");
-await dp.click("button:has-text('Create 1 link')");
+await dp.click("button:has-text('Send 1 key')");
 await dp.waitForSelector("text=1 link for");
 await dp.click("button:has-text('Done')");
 await dp.waitForSelector("text=used today");
-assert(await dp.isDisabled("button:has-text('Create')"), "create button disabled after daily quota");
+assert(await dp.isDisabled("button:has-text('Send')"), "create button disabled after daily quota");
 
 step("dev: my links — revoke one, claim one, report bad key");
 await dp.goto(`${BASE}/my-links`);

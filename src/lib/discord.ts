@@ -76,16 +76,17 @@ export function notifyClaimed(p: {
   appName: string;
   label: string | null;
   senderName: string | null;
-  keyHint: string;
+  keyHints: string[];
   remaining: number;
 }) {
   const who = p.label ? `**${esc(p.label)}**` : "Someone";
   const low = p.remaining <= lowStockThreshold();
+  const n = p.keyHints.length;
   notify("claim", {
-    title: `🔑 Key claimed · ${esc(p.appName)}`,
-    description: `${who} opened their key${p.senderName ? ` (sent by ${esc(p.senderName)})` : ""}.`,
+    title: `🔑 ${n > 1 ? `${n} keys` : "Key"} claimed · ${esc(p.appName)}`,
+    description: `${who} opened their key${n > 1 ? "s" : ""}${p.senderName ? ` (sent by ${esc(p.senderName)})` : ""}.`,
     fields: [
-      { name: "Key", value: `\`…${p.keyHint}\``, inline: true },
+      { name: n > 1 ? "Keys" : "Key", value: p.keyHints.map((h) => `\`…${h}\``).join(" "), inline: true },
       { name: "Left in pool", value: low ? `⚠️ **${p.remaining}**` : String(p.remaining), inline: true },
     ],
   });
@@ -101,9 +102,9 @@ export function notifyBadKey(p: { appName: string; keyHint: string; reporterName
 }
 
 /** Someone created claim links. */
-export function notifySent(p: { appName: string; count: number; senderName: string; label: string | null; remaining: number }) {
+export function notifySent(p: { appName: string; count: number; links: number; senderName: string; label: string | null; remaining: number }) {
   notify("send", {
-    title: `📨 ${p.count} link${p.count === 1 ? "" : "s"} created · ${esc(p.appName)}`,
+    title: `📨 ${p.count} key${p.count === 1 ? "" : "s"} on ${p.links} link${p.links === 1 ? "" : "s"} · ${esc(p.appName)}`,
     description: `${esc(p.senderName)}${p.label ? ` → ${esc(p.label)}` : ""} · ${p.remaining} left in pool`,
   });
 }

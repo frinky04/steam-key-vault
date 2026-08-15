@@ -40,6 +40,7 @@ export function KeysTable({ rows, total, page, pageSize, now }: Props) {
   const [links, setLinks] = useState<CreatedLink[] | null>(null);
   const [label, setLabel] = useState("");
   const [ttl, setTtl] = useState("48");
+  const [bundle, setBundle] = useState(false);
   const [noExpiry, setNoExpiry] = useState(false);
   const [revealModal, setRevealModal] = useState<{ id: number; key: string }[] | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -104,7 +105,7 @@ export function KeysTable({ rows, total, page, pageSize, now }: Props) {
     e.preventDefault();
     setLinkError(null);
     start(async () => {
-      const r = await createClaimLinks({ keyIds: ids, label, ttlHours: noExpiry ? 0 : Number(ttl) });
+      const r = await createClaimLinks({ keyIds: ids, bundle, label, ttlHours: noExpiry ? 0 : Number(ttl) });
       if (!r.ok) return setLinkError(r.error);
       setLinks(r.data ?? []);
       router.refresh();
@@ -263,9 +264,17 @@ export function KeysTable({ rows, total, page, pageSize, now }: Props) {
           <LinksResult links={links} onClose={() => setLinkModal(false)} />
         ) : (
           <form onSubmit={makeLinks} className="space-y-3">
-            <p className="text-sm text-muted">
-              One single-use link per selected key. Keys already claimed/used, or with a live link, are skipped.
-            </p>
+            <p className="text-sm text-muted">Keys already claimed/used, or with a live link, are skipped.</p>
+            {ids.length > 1 && (
+              <div className="flex gap-4 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="mode" checked={!bundle} onChange={() => setBundle(false)} /> One link per key ({ids.length} links)
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="mode" checked={bundle} onChange={() => setBundle(true)} /> One link with all {ids.length} keys
+                </label>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Label (who)</label>

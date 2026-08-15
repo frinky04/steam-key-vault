@@ -20,7 +20,7 @@ export default async function SendPage() {
           {isDev && (
             <>
               {" "}
-              You can send <b className="text-foreground">{Math.max(0, user.dailyLinkLimit - quota.today)}</b> more today
+              You can send <b className="text-foreground">{Math.max(0, user.dailyLinkLimit - quota.today)}</b> more keys today
               (limit {user.dailyLinkLimit}/day, {user.batchLinkLimit} at a time).
             </>
           )}

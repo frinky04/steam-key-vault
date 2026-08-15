@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { apps, auditLog, batches, claimLinks, keys, users, type KeyStatus } from "@/db/schema";
+import { apps, auditLog, batches, claimLinkKeys, claimLinks, keys, users, type KeyStatus } from "@/db/schema";
 
 export type StatusCounts = Record<KeyStatus, number>;
 const emptyCounts = (): StatusCounts => ({ available: 0, reserved: 0, claimed: 0, used: 0, invalid: 0 });
@@ -108,13 +108,14 @@ export async function listKeys(appId: number, f: KeyFilter = {}) {
 
   const activeLink = db
     .select({
-      keyId: claimLinks.keyId,
+      keyId: claimLinkKeys.keyId,
       id: sql<number>`max(${claimLinks.id})`.as("active_link_id"),
       expiresAt: sql<Date>`max(${claimLinks.expiresAt})`.as("active_link_expires"),
     })
-    .from(claimLinks)
+    .from(claimLinkKeys)
+    .innerJoin(claimLinks, eq(claimLinks.id, claimLinkKeys.linkId))
     .where(and(isNull(claimLinks.revealedAt), isNull(claimLinks.revokedAt), sql`${claimLinks.expiresAt} > now()`))
-    .groupBy(claimLinks.keyId)
+    .groupBy(claimLinkKeys.keyId)
     .as("al");
 
   const [rows, [{ total }]] = await Promise.all([
@@ -156,14 +157,34 @@ export async function listLinks(opts: { view?: LinkView; limit?: number; created
     conds.push(isNull(claimLinks.revealedAt), isNull(claimLinks.revokedAt), sql`${claimLinks.expiresAt} <= now()`);
   }
   if (opts.createdByUserId) conds.push(eq(claimLinks.createdByUserId, opts.createdByUserId));
+  // Keys per link, aggregated in link order.
+  const agg = db
+    .select({
+      linkId: claimLinkKeys.linkId,
+      keyIds: sql<number[]>`array_agg(${keys.id} order by ${claimLinkKeys.position}, ${claimLinkKeys.id})`.as("key_ids"),
+      keyHints: sql<string[]>`array_agg(${keys.keyHint} order by ${claimLinkKeys.position}, ${claimLinkKeys.id})`.as("key_hints"),
+      keyStatuses: sql<KeyStatus[]>`array_agg(${keys.status}::text order by ${claimLinkKeys.position}, ${claimLinkKeys.id})`.as("key_statuses"),
+      appNames: sql<string[]>`array_agg(distinct ${apps.name})`.as("app_names"),
+      appId: sql<number>`min(${apps.id})`.as("app_id"),
+      appName: sql<string>`(array_agg(${apps.name} order by ${claimLinkKeys.position}, ${claimLinkKeys.id}))[1]`.as("app_name"),
+      keyCount: sql<number>`count(*)::int`.as("key_count"),
+    })
+    .from(claimLinkKeys)
+    .innerJoin(keys, eq(keys.id, claimLinkKeys.keyId))
+    .innerJoin(apps, eq(apps.id, keys.appId))
+    .groupBy(claimLinkKeys.linkId)
+    .as("lk");
+
   return db
     .select({
       id: claimLinks.id,
-      keyId: claimLinks.keyId,
-      keyHint: keys.keyHint,
-      keyStatus: keys.status,
-      appId: apps.id,
-      appName: apps.name,
+      keyIds: agg.keyIds,
+      keyHints: agg.keyHints,
+      keyStatuses: agg.keyStatuses,
+      keyCount: agg.keyCount,
+      appId: agg.appId,
+      appName: agg.appName,
+      appNames: agg.appNames,
       label: claimLinks.label,
       expiresAt: claimLinks.expiresAt,
       revealedAt: claimLinks.revealedAt,
@@ -174,8 +195,7 @@ export async function listLinks(opts: { view?: LinkView; limit?: number; created
       createdByUserId: claimLinks.createdByUserId,
     })
     .from(claimLinks)
-    .innerJoin(keys, eq(keys.id, claimLinks.keyId))
-    .innerJoin(apps, eq(apps.id, keys.appId))
+    .innerJoin(agg, eq(agg.linkId, claimLinks.id))
     .leftJoin(users, eq(users.id, claimLinks.createdByUserId))
     .where(conds.length ? and(...conds) : undefined)
     .orderBy(desc(claimLinks.createdAt))
@@ -231,8 +251,8 @@ export async function listUsers() {
       disabledAt: users.disabledAt,
       lastLoginAt: users.lastLoginAt,
       createdAt: users.createdAt,
-      linksTotal: sql<number>`(select count(*)::int from ${claimLinks} cl where cl.created_by_user_id = ${users.id})`,
-      linksToday: sql<number>`(select count(*)::int from ${claimLinks} cl where cl.created_by_user_id = ${users.id} and cl.created_at >= date_trunc('day', now() at time zone 'utc'))`,
+      linksTotal: sql<number>`(select count(*)::int from ${claimLinks} cl where cl.created_by_user_id = "users"."id")`,
+      linksToday: sql<number>`(select count(*)::int from ${claimLinkKeys} clk join ${claimLinks} cl on cl.id = clk.link_id where cl.created_by_user_id = "users"."id" and cl.created_at >= date_trunc('day', now() at time zone 'utc'))`,
     })
     .from(users)
     .orderBy(users.role, users.name);
@@ -242,7 +262,8 @@ export async function listUsers() {
 export async function userQuota(userId: number) {
   const [{ today }] = await db
     .select({ today: sql<number>`count(*)::int` })
-    .from(claimLinks)
+    .from(claimLinkKeys)
+    .innerJoin(claimLinks, eq(claimLinks.id, claimLinkKeys.linkId))
     .where(and(eq(claimLinks.createdByUserId, userId), sql`${claimLinks.createdAt} >= date_trunc('day', now() at time zone 'utc')`));
   return { today };
 }

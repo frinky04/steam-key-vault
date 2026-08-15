@@ -17,7 +17,9 @@ export async function generateMetadata({ params }: PageProps<"/claim/[token]">):
   if (!p) {
     return { ...base, title: "Steam key link", description: "This link is not valid." };
   }
-  const title = p.live ? `Your Steam key for ${p.appName}` : `Steam key for ${p.appName}`;
+  const what = p.keyCount > 1 ? `${p.keyCount} Steam keys` : "Steam key";
+  const name = p.appNames.join(" + ");
+  const title = p.live ? `Your ${what} for ${name}` : `${what} for ${name}`;
   // No description on purpose: the generated image carries the message.
   return {
     ...base,

@@ -19,7 +19,7 @@ async function bestArtwork(steamAppId: number | null, fallback: string | null): 
 }
 
 function hoursLeft(d: Date | null) {
-  if (!d) return null;
+  if (!d || d.getUTCFullYear() >= 9000) return null;
   const h = Math.max(0, Math.round((d.getTime() - Date.now()) / 3600000));
   return h >= 48 ? `${Math.round(h / 24)} days` : `${h} hours`;
 }
@@ -29,11 +29,11 @@ export default async function Image({ params }: { params: Promise<{ token: strin
   const p = await getClaimPreview(token);
   const art = p ? await bestArtwork(p.steamAppId, p.headerImage) : null;
 
-  const title = p ? p.appName : "Steam key";
+  const title = p ? p.appNames.join(" + ") : "Steam key";
   const subtitle = !p
     ? "This link is not valid"
     : p.live
-      ? `${SENDER_NAME} sent you a Steam key · expires in ${hoursLeft(p.expiresAt)}`
+      ? `${SENDER_NAME} sent you ${p.keyCount > 1 ? `${p.keyCount} Steam keys` : "a Steam key"} · ${hoursLeft(p.expiresAt) ? `expires in ${hoursLeft(p.expiresAt)}` : "no expiry"}`
       : "This key link has already been used or expired";
 
   return new ImageResponse(
@@ -100,7 +100,7 @@ export default async function Image({ params }: { params: Promise<{ token: strin
         {/* text */}
         <div style={{ position: "absolute", left: 48, right: 48, bottom: 48, display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ fontSize: 30, color: "#8fd6ff", fontWeight: 600, letterSpacing: 1 }}>
-            {p?.live ? "STEAM KEY · SINGLE USE" : "STEAM KEY"}
+            {p && p.keyCount > 1 ? `${p.keyCount} STEAM KEYS` : "STEAM KEY"}{p?.live ? " · SINGLE USE" : ""}
           </div>
           <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.05, textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}>{title}</div>
           <div style={{ fontSize: 32, color: "#c9d4e0" }}>{subtitle}</div>

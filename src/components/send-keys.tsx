@@ -13,6 +13,7 @@ export function SendKeys({ apps, limits }: { apps: AppOpt[]; limits: Limits }) {
   const router = useRouter();
   const [appId, setAppId] = useState<number>(apps.find((a) => a.available > 0)?.id ?? apps[0].id);
   const [count, setCount] = useState("1");
+  const [perLink, setPerLink] = useState("1");
   const [label, setLabel] = useState("");
   const [ttl, setTtl] = useState("48");
   const [noExpiry, setNoExpiry] = useState(false);
@@ -28,7 +29,7 @@ export function SendKeys({ apps, limits }: { apps: AppOpt[]; limits: Limits }) {
     e.preventDefault();
     setError(null);
     start(async () => {
-      const r = await createClaimLinks({ appId, count: Number(count), label, ttlHours: noExpiry ? 0 : Number(ttl) });
+      const r = await createClaimLinks({ appId, count: Number(count), keysPerLink: Number(perLink), label, ttlHours: noExpiry ? 0 : Number(ttl) });
       if (!r.ok) return setError(r.error);
       setLinks(r.data ?? []);
       router.refresh();
@@ -40,6 +41,7 @@ export function SendKeys({ apps, limits }: { apps: AppOpt[]; limits: Limits }) {
       <div className="card space-y-3">
         <h2 className="font-semibold">
           {links.length} link{links.length === 1 ? "" : "s"} for {app.name}
+          {links.some((l) => l.keyIds.length > 1) ? ` (${links.reduce((n, l) => n + l.keyIds.length, 0)} keys)` : ""}
         </h2>
         <LinksResult links={links} onClose={() => { setLinks(null); setCount("1"); setLabel(""); }} />
       </div>
@@ -72,12 +74,21 @@ export function SendKeys({ apps, limits }: { apps: AppOpt[]; limits: Limits }) {
 
       <div className="card space-y-3 self-start">
         <div className="text-sm font-medium">{app.name}</div>
-        <div>
-          <label className="label">How many links</label>
-          <input className="input" type="number" min={1} max={maxCount} value={count} onChange={(e) => setCount(e.target.value)} disabled={blocked || app.available === 0} />
-          <p className="mt-1 text-xs text-muted">
-            {app.available === 0 ? "No keys available for this game." : `max ${maxCount} right now`}
-          </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">How many keys</label>
+            <input className="input" type="number" min={1} max={maxCount} value={count} onChange={(e) => setCount(e.target.value)} disabled={blocked || app.available === 0} />
+            <p className="mt-1 text-xs text-muted">
+              {app.available === 0 ? "No keys available." : `max ${maxCount} right now`}
+            </p>
+          </div>
+          <div>
+            <label className="label">Keys per link</label>
+            <input className="input" type="number" min={1} max={20} value={perLink} onChange={(e) => setPerLink(e.target.value)} disabled={blocked || app.available === 0} />
+            <p className="mt-1 text-xs text-muted">
+              {Number(perLink) > 1 ? `→ ${Math.floor(Number(count) / Number(perLink)) || 0} link(s)` : "one link per key"}
+            </p>
+          </div>
         </div>
         <div>
           <label className="label">Who is it for? (optional)</label>
@@ -87,7 +98,7 @@ export function SendKeys({ apps, limits }: { apps: AppOpt[]; limits: Limits }) {
         {error && <p className="text-sm text-danger">{error}</p>}
         {blocked && <p className="text-sm text-warn">You have used today&apos;s allowance. It resets at midnight UTC.</p>}
         <button className="btn btn-primary w-full justify-center" disabled={pending || blocked || app.available === 0}>
-          {pending ? "Creating…" : `Create ${count || 1} link${Number(count) === 1 ? "" : "s"}`}
+          {pending ? "Creating…" : `Send ${count || 1} key${Number(count) === 1 ? "" : "s"}`}
         </button>
       </div>
     </form>

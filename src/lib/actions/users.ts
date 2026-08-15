@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { claimLinks, keys, sessions, users, type UserRole } from "@/db/schema";
+import { claimLinkKeys, claimLinks, keys, sessions, users, type UserRole } from "@/db/schema";
+import { keyHasNoLiveLink } from "@/lib/link-sql";
 import { requireAdmin } from "@/lib/auth";
 import { hashToken, newToken } from "@/lib/crypto";
 import { audit } from "@/lib/audit";
@@ -140,18 +141,24 @@ export async function deleteUser(userId: number): Promise<ActionResult> {
       .update(claimLinks)
       .set({ revokedAt: new Date() })
       .where(and(eq(claimLinks.createdByUserId, userId), sql`${claimLinks.revealedAt} is null`, sql`${claimLinks.revokedAt} is null`))
-      .returning({ keyId: claimLinks.keyId });
+      .returning({ id: claimLinks.id });
     if (revoked.length) {
-      await tx
-        .update(keys)
-        .set({ status: "available", assignee: null, updatedAt: new Date() })
-        .where(
-          and(
-            sql`${keys.id} in (${sql.join(revoked.map((r) => sql`${r.keyId}`), sql`, `)})`,
-            eq(keys.status, "reserved"),
-            sql`not exists (select 1 from ${claimLinks} cl where cl.key_id = ${keys.id} and cl.revealed_at is null and cl.revoked_at is null and cl.expires_at > now())`,
-          ),
-        );
+      const lk = await tx
+        .select({ keyId: claimLinkKeys.keyId })
+        .from(claimLinkKeys)
+        .where(sql`${claimLinkKeys.linkId} in (${sql.join(revoked.map((r) => sql`${r.id}`), sql`, `)})`);
+      if (lk.length) {
+        await tx
+          .update(keys)
+          .set({ status: "available", assignee: null, updatedAt: new Date() })
+          .where(
+            and(
+              sql`${keys.id} in (${sql.join(lk.map((r) => sql`${r.keyId}`), sql`, `)})`,
+              eq(keys.status, "reserved"),
+              keyHasNoLiveLink,
+            ),
+          );
+      }
     }
     await tx.delete(users).where(eq(users.id, userId));
     return revoked.length;

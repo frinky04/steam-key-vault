@@ -10,9 +10,11 @@ import { LocalTime } from "./local-time";
 
 type Row = {
   id: number;
-  keyId: number;
-  keyHint: string;
-  keyStatus: KeyStatus;
+  keyIds: number[];
+  keyHints: string[];
+  keyStatuses: KeyStatus[];
+  keyCount: number;
+  appNames: string[];
   appId: number;
   appName: string;
   label: string | null;
@@ -107,15 +109,19 @@ export function LinksTable({ rows, now }: { rows: Row[]; now: number }) {
                   </td>
                   <td className="px-2 py-1.5">
                     <Link href={`/apps/${r.appId}`} className="hover:text-accent">
-                      {r.appName}
+                      {r.appNames.length > 1 ? r.appNames.join(" + ") : r.appName}
                     </Link>
                   </td>
-                  <td className="px-2 py-1.5 font-mono text-xs text-muted">…{r.keyHint}</td>
+                  <td className="px-2 py-1.5 font-mono text-xs text-muted" title={r.keyHints.map((h) => `…${h}`).join(", ")}>
+                    {r.keyCount > 1 ? `${r.keyCount} keys` : `…${r.keyHints[0]}`}
+                  </td>
                   <td className="px-2 py-1.5">{r.label ?? <span className="text-border">—</span>}</td>
                   <td className="px-2 py-1.5 text-xs text-muted">{r.createdByName ?? "—"}</td>
                   <td className={`px-2 py-1.5 text-xs font-medium ${st.cls}`}>{st.label}</td>
                   <td className="px-2 py-1.5">
-                    <StatusBadge status={r.keyStatus} />
+                    {[...new Set(r.keyStatuses)].map((s) => (
+                      <StatusBadge key={s} status={s} />
+                    ))}
                   </td>
                   <td className="px-2 py-1.5 text-xs text-muted"><LocalTime value={r.createdAt} /></td>
                   <td className="px-2 py-1.5 text-xs text-muted" title={r.revealIp ?? undefined}>

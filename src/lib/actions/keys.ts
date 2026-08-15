@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { claimLinks, keys, type KeyStatus, KEY_STATUSES } from "@/db/schema";
+import { claimLinkKeys, claimLinks, keys, type KeyStatus, KEY_STATUSES } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { decryptKey, hashKey, normalizeKey } from "@/lib/crypto";
 import { parseKeysFromText } from "@/lib/parse-keys";
@@ -39,10 +39,15 @@ export async function bulkSetStatus(input: {
       .returning({ id: keys.id, appId: keys.appId });
 
     if (input.status === "available") {
-      await tx
-        .update(claimLinks)
-        .set({ revokedAt: new Date() })
-        .where(and(inArray(claimLinks.keyId, ids), isNull(claimLinks.revealedAt), isNull(claimLinks.revokedAt)));
+      const linkIds = (
+        await tx.select({ linkId: claimLinkKeys.linkId }).from(claimLinkKeys).where(inArray(claimLinkKeys.keyId, ids))
+      ).map((r) => r.linkId);
+      if (linkIds.length) {
+        await tx
+          .update(claimLinks)
+          .set({ revokedAt: new Date() })
+          .where(and(inArray(claimLinks.id, linkIds), isNull(claimLinks.revealedAt), isNull(claimLinks.revokedAt)));
+      }
     }
 
     await auditMany(

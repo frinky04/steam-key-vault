@@ -116,10 +116,10 @@ export function UsersManager({ users, meId, now }: { users: UserRow[]; meId: num
                     {disabled ? <span className="text-danger">Disabled</span> : u.hasPassword ? <span className="text-ok">Active</span> : inviteLive ? <span className="text-warn">Invited</span> : <span className="text-danger">Invite expired</span>}
                   </td>
                   <td className="px-2 py-1.5 text-xs text-muted">
-                    {u.role === "admin" ? "unlimited" : `${u.dailyLinkLimit}/day · ${u.batchLinkLimit}/batch`}
+                    {u.role === "admin" ? "unlimited" : `${u.dailyLinkLimit} keys/day · ${u.batchLinkLimit}/batch`}
                   </td>
                   <td className="px-2 py-1.5 text-xs text-muted">
-                    {u.linksTotal} total · {u.linksToday} today
+                    {u.linksTotal} links · {u.linksToday} keys today
                   </td>
                   <td className="px-2 py-1.5 text-xs text-muted"><LocalTime value={u.lastLoginAt} /></td>
                   <td className="px-2 py-1.5 text-right whitespace-nowrap">
@@ -165,7 +165,7 @@ export function UsersManager({ users, meId, now }: { users: UserRow[]; meId: num
           {role === "dev" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Links / day</label>
+                <label className="label">Keys / day</label>
                 <input className="input" type="number" min={0} value={daily} onChange={(e) => setDaily(e.target.value)} />
               </div>
               <div>
@@ -213,7 +213,7 @@ export function UsersManager({ users, meId, now }: { users: UserRow[]; meId: num
             {edit.role === "dev" && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="label">Links / day</label>
+                  <label className="label">Keys / day</label>
                   <input className="input" type="number" min={0} value={edit.dailyLinkLimit} onChange={(e) => setEdit({ ...edit, dailyLinkLimit: Number(e.target.value) })} />
                 </div>
                 <div>

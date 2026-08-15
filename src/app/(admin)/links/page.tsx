@@ -39,6 +39,7 @@ export default async function LinksPage({ searchParams }: PageProps<"/links">) {
         now={now}
         rows={links.map((l) => ({
           ...l,
+          appId: l.appId,
           expiresAt: l.expiresAt.toISOString(),
           revealedAt: l.revealedAt?.toISOString() ?? null,
           revokedAt: l.revokedAt?.toISOString() ?? null,

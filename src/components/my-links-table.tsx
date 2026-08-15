@@ -10,9 +10,10 @@ import { LocalTime } from "./local-time";
 type Row = {
   id: number;
   appName: string;
-  keyHint: string;
+  keyIds: number[];
+  keyHints: string[];
+  keyStatuses: KeyStatus[];
   label: string | null;
-  keyStatus: KeyStatus;
   expiresAt: string;
   revealedAt: string | null;
   revokedAt: string | null;
@@ -20,7 +21,8 @@ type Row = {
 };
 
 function state(r: Row, now: number) {
-  if (r.keyStatus === "invalid") return { label: "Reported bad", cls: "text-danger" };
+  if (r.keyStatuses.every((s) => s === "invalid")) return { label: "Reported bad", cls: "text-danger" };
+  if (r.revealedAt && r.keyStatuses.some((s) => s === "invalid")) return { label: "Claimed · 1 reported bad", cls: "text-warn" };
   if (r.revealedAt) return { label: "Claimed", cls: "text-accent" };
   if (r.revokedAt) return { label: "Revoked", cls: "text-muted" };
   if (new Date(r.expiresAt).getTime() < now) return { label: "Expired", cls: "text-muted" };
@@ -43,11 +45,22 @@ export function MyLinksTable({ rows, now }: { rows: Row[]; now: number }) {
       router.refresh();
     });
   }
-  function report(id: number) {
+  function report(row: Row) {
+    let keyId: number | undefined;
+    if (row.keyIds.length > 1) {
+      const options = row.keyIds
+        .map((id, i) => ({ id, hint: row.keyHints[i], status: row.keyStatuses[i] }))
+        .filter((k) => k.status !== "invalid");
+      const pick = prompt(`Which key was bad? Type its ending:\n${options.map((k) => `…${k.hint}`).join("\n")}`);
+      if (pick === null) return;
+      const chosen = options.find((k) => k.hint.toUpperCase() === pick.trim().replace(/^…/, "").toUpperCase());
+      if (!chosen) return setMsg("No key on this link ends with that.");
+      keyId = chosen.id;
+    }
     const note = prompt("What did the recipient report? (optional)");
     if (note === null) return;
     start(async () => {
-      const r = await reportBadKey(id, note);
+      const r = await reportBadKey(row.id, note, keyId);
       setMsg(r.ok ? "Reported — the key is retired and the admin will see it." : r.error);
       router.refresh();
     });
@@ -75,7 +88,10 @@ export function MyLinksTable({ rows, now }: { rows: Row[]; now: number }) {
               return (
                 <tr key={r.id} className="border-t border-border">
                   <td className="px-2 py-1.5">
-                    {r.appName} <span className="font-mono text-xs text-muted">…{r.keyHint}</span>
+                    {r.appName}{" "}
+                    <span className="font-mono text-xs text-muted" title={r.keyHints.map((h) => `…${h}`).join(", ")}>
+                      {r.keyHints.length > 1 ? `${r.keyHints.length} keys` : `…${r.keyHints[0]}`}
+                    </span>
                   </td>
                   <td className="px-2 py-1.5">{r.label ?? <span className="text-border">—</span>}</td>
                   <td className={`px-2 py-1.5 text-xs font-medium ${st.cls}`}>{st.label}</td>
@@ -87,8 +103,8 @@ export function MyLinksTable({ rows, now }: { rows: Row[]; now: number }) {
                         Revoke
                       </button>
                     )}
-                    {r.revealedAt && r.keyStatus !== "invalid" && (
-                      <button className="btn btn-sm" disabled={pending} onClick={() => report(r.id)} title="Recipient says the key did not work">
+                    {r.revealedAt && r.keyStatuses.some((s) => s !== "invalid") && (
+                      <button className="btn btn-sm" disabled={pending} onClick={() => report(r)} title="Recipient says a key did not work">
                         Report bad key
                       </button>
                     )}

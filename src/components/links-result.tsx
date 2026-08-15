@@ -17,8 +17,10 @@ export function LinksResult({ links, onClose }: { links: CreatedLink[]; onClose:
         <table className="w-full text-sm">
           <tbody>
             {links.map((l) => (
-              <tr key={l.keyId} className="border-b border-border last:border-0">
-                <td className="px-2 py-1.5 font-mono text-xs text-muted">…{l.keyHint}</td>
+              <tr key={l.linkId} className="border-b border-border last:border-0">
+                <td className="whitespace-nowrap px-2 py-1.5 font-mono text-xs text-muted">
+                  {l.keyHints.length > 1 ? `${l.keyHints.length} keys` : `…${l.keyHints[0]}`}
+                </td>
                 <td className="px-2 py-1.5 font-mono text-xs break-all">{l.url}</td>
                 <td className="px-2 py-1.5 text-right">
                   <CopyButton text={l.url} />

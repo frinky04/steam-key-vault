@@ -37,10 +37,11 @@ export default async function MyLinksPage({ searchParams }: PageProps<"/my-links
         now={now}
         rows={links.map((l) => ({
           id: l.id,
-          appName: l.appName,
-          keyHint: l.keyHint,
+          appName: l.appNames.length > 1 ? l.appNames.join(" + ") : l.appName,
+          keyIds: l.keyIds,
+          keyHints: l.keyHints,
           label: l.label,
-          keyStatus: l.keyStatus,
+          keyStatuses: l.keyStatuses,
           expiresAt: l.expiresAt.toISOString(),
           revealedAt: l.revealedAt?.toISOString() ?? null,
           revokedAt: l.revokedAt?.toISOString() ?? null,

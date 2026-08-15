@@ -121,9 +121,6 @@ export const claimLinks = pgTable(
   "claim_links",
   {
     id: serial("id").primaryKey(),
-    keyId: integer("key_id")
-      .notNull()
-      .references(() => keys.id, { onDelete: "cascade" }),
     // SHA-256 of the URL token; the raw token is only shown once at creation
     tokenHash: text("token_hash").notNull(),
     label: text("label"), // who the link is for
@@ -137,9 +134,24 @@ export const claimLinks = pgTable(
   },
   (t) => [
     uniqueIndex("claim_links_token_hash_uq").on(t.tokenHash),
-    index("claim_links_key_idx").on(t.keyId),
     index("claim_links_creator_idx").on(t.createdByUserId, t.createdAt),
   ],
+);
+
+/** Keys attached to a claim link (a link may reveal several keys at once). */
+export const claimLinkKeys = pgTable(
+  "claim_link_keys",
+  {
+    id: serial("id").primaryKey(),
+    linkId: integer("link_id")
+      .notNull()
+      .references(() => claimLinks.id, { onDelete: "cascade" }),
+    keyId: integer("key_id")
+      .notNull()
+      .references(() => keys.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+  },
+  (t) => [uniqueIndex("claim_link_keys_uq").on(t.linkId, t.keyId), index("claim_link_keys_key_idx").on(t.keyId)],
 );
 
 export const auditLog = pgTable(
@@ -168,10 +180,14 @@ export const batchesRelations = relations(batches, ({ one, many }) => ({
 export const keysRelations = relations(keys, ({ one, many }) => ({
   app: one(apps, { fields: [keys.appId], references: [apps.id] }),
   batch: one(batches, { fields: [keys.batchId], references: [batches.id] }),
-  claimLinks: many(claimLinks),
+  linkKeys: many(claimLinkKeys),
 }));
-export const claimLinksRelations = relations(claimLinks, ({ one }) => ({
-  key: one(keys, { fields: [claimLinks.keyId], references: [keys.id] }),
+export const claimLinksRelations = relations(claimLinks, ({ many }) => ({
+  keys: many(claimLinkKeys),
+}));
+export const claimLinkKeysRelations = relations(claimLinkKeys, ({ one }) => ({
+  link: one(claimLinks, { fields: [claimLinkKeys.linkId], references: [claimLinks.id] }),
+  key: one(keys, { fields: [claimLinkKeys.keyId], references: [keys.id] }),
 }));
 
 export type App = typeof apps.$inferSelect;

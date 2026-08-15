@@ -17,6 +17,7 @@ export function AppHeaderActions({ app, counts }: { app: App; counts: Record<Key
   const [linkModal, setLinkModal] = useState(false);
   const [links, setLinks] = useState<CreatedLink[] | null>(null);
   const [count, setCount] = useState("1");
+  const [perLink, setPerLink] = useState("1");
   const [label, setLabel] = useState("");
   const [ttl, setTtl] = useState("48");
   const [noExpiry, setNoExpiry] = useState(false);
@@ -27,7 +28,7 @@ export function AppHeaderActions({ app, counts }: { app: App; counts: Record<Key
     e.preventDefault();
     setError(null);
     start(async () => {
-      const res = await createClaimLinks({ appId: app.id, count: Number(count), label, ttlHours: noExpiry ? 0 : Number(ttl) });
+      const res = await createClaimLinks({ appId: app.id, count: Number(count), keysPerLink: Number(perLink), label, ttlHours: noExpiry ? 0 : Number(ttl) });
       if (!res.ok) return setError(res.error);
       setLinks(res.data ?? []);
       router.refresh();
@@ -87,9 +88,16 @@ export function AppHeaderActions({ app, counts }: { app: App; counts: Record<Key
             </p>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="label">How many</label>
+                <label className="label">How many keys</label>
                 <input className="input" type="number" min={1} max={Math.min(500, counts.available)} value={count} onChange={(e) => setCount(e.target.value)} />
                 <p className="mt-1 text-xs text-muted">{counts.available} available</p>
+              </div>
+              <div>
+                <label className="label">Keys per link</label>
+                <input className="input" type="number" min={1} max={20} value={perLink} onChange={(e) => setPerLink(e.target.value)} />
+                <p className="mt-1 text-xs text-muted">
+                  {Number(perLink) > 1 ? `→ ${Math.floor(Number(count) / Number(perLink)) || 0} link(s)` : "one link per key"}
+                </p>
               </div>
               <div>
                 <label className="label">Label (who)</label>
