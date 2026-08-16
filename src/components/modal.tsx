@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 export function Modal({
   open,
@@ -16,9 +16,11 @@ export function Modal({
   wide?: boolean;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const handleClose = useEffectEvent(onClose);
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && handleClose();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
@@ -27,7 +29,7 @@ export function Modal({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (
